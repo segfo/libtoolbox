@@ -46,9 +46,10 @@ where
         let f = OpenOptions::new()
             .read(false)
             .write(true)
-            .create_new(true)
+            .create(true)
+            .truncate(true)
             .open(filepath)?;
-        TomlConfigSerializer::to_writer(&data, f);
+        TomlConfigSerializer::to_writer(&data, f)?;
         Ok(())
     }
     pub fn to_writer<W>(data: &T, writer: W) -> Result<(), Box<dyn std::error::Error>>
@@ -56,7 +57,7 @@ where
         W: Write,
     {
         let mut bw = BufWriter::new(writer);
-        bw.write(toml::to_string(data)?.as_bytes());
+        bw.write(toml::to_string(data)?.as_bytes())?;
         Ok(())
     }
 }

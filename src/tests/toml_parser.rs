@@ -42,4 +42,17 @@ mod serializer {
         assert_eq!(config.is_ok(), true);
         assert_eq!(conf, config.unwrap());
     }
+    #[test]
+    fn serialize_to_file() {
+        let serialize_file = "./test_data/serialize.toml";
+        let mut conf = Config::new();
+        TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
+        assert_eq!(conf, load_conf);
+        conf.int32 = 20;
+        conf.string = "manipulated.".to_owned();
+        TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
+        assert_eq!(conf, load_conf);
+    }
 }
