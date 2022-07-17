@@ -43,8 +43,9 @@ mod serializer {
         assert_eq!(conf, config.unwrap());
     }
     #[test]
-    fn serialize_to_file() {
+    fn serialize_to_file_存在しないファイルを作る場合() {
         let serialize_file = "./test_data/serialize.toml";
+        assert_eq!(std::path::Path::new(serialize_file).exists(), false);
         let mut conf = Config::new();
         TomlConfigSerializer::to_file(conf.clone(), serialize_file);
         let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
@@ -54,5 +55,52 @@ mod serializer {
         TomlConfigSerializer::to_file(conf.clone(), serialize_file);
         let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
         assert_eq!(conf, load_conf);
+        std::fs::remove_file(serialize_file);
+    }
+    #[test]
+    fn serialize_to_file_存在しないディレクトリの下にファイルを作成する場合() {
+        let serialize_file = "./test_data/non_exists/serialize.toml";
+        let mut conf = Config::new();
+        TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
+        assert_eq!(conf, load_conf);
+        conf.int32 = 20;
+        conf.string = "manipulated.".to_owned();
+        TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
+        assert_eq!(conf, load_conf);
+        std::fs::remove_file(serialize_file);
+        std::fs::remove_dir("./test_data/non_exists/");
+        std::fs::remove_dir("./test_data");
+    }
+    #[test]
+    fn deserialize_to_file_存在するディレクトリ_非ファイル_を指定する() {
+        let serialize_file = "./test_data/exists_directory";
+        assert!(std::path::Path::new(serialize_file).is_dir());
+        let conf = Config::new();
+        let result = TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        assert!(result.is_err())
+    }
+}
+
+mod deserializer {
+    use crate::tests::toml_parser::Config;
+    use crate::toml_parser::{TomlConfigDeserializer, TomlConfigSerializer};
+    use std::io::Cursor;
+    #[test]
+    fn from_file_存在するディレクトリ_非ファイル_を指定する() {
+        let serialize_file = "./test_data/exists_directory";
+        assert_eq!(std::path::Path::new(serialize_file).is_dir(), true);
+        let result: Result<Config, Box<dyn std::error::Error>> =
+            TomlConfigDeserializer::from_file(serialize_file);
+        assert!(result.is_err())
+    }
+    #[test]
+    fn from_file_存在しないファイルを指定する() {
+        let serialize_file = "./test_data/not_exists.toml";
+        assert_eq!(std::path::Path::new(serialize_file).exists(), false);
+        let result: Result<Config, Box<dyn std::error::Error>> =
+            TomlConfigDeserializer::from_file(serialize_file);
+        assert!(result.is_err())
     }
 }

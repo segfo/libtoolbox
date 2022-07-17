@@ -43,6 +43,10 @@ where
     T: Serialize,
 {
     pub fn to_file(data: T, filepath: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let path = std::path::Path::new(filepath);
+        if !path.is_dir() && !path.has_root() {
+            std::fs::create_dir_all(path.parent().unwrap());
+        }
         let f = OpenOptions::new()
             .read(false)
             .write(true)
