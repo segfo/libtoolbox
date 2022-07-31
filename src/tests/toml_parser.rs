@@ -74,7 +74,7 @@ mod serializer {
         std::fs::remove_dir("./test_data");
     }
     #[test]
-    fn deserialize_to_file_存在するディレクトリ_非ファイル_を指定する() {
+    fn serialize_to_file_存在するディレクトリ_非ファイル_を指定する() {
         let serialize_file = "./test_data/exists_directory";
         assert!(std::path::Path::new(serialize_file).is_dir());
         let conf = Config::new();
