@@ -17,6 +17,8 @@ fn バイナリデータからUTF8文字列とバイナリに分離する() {
         DataSequence::BinaryArray(vec![0xf8]),
         DataSequence::Utf8("NVAlid".to_owned()),
     ];
+    println!("{:?}", actual_seq);
+    assert_eq!(actual_seq.len(), expect_seq.len());
     for (i, seq) in actual_seq.iter().enumerate() {
         assert_eq!(seq, &expect_seq[i]);
     }
@@ -147,6 +149,24 @@ fn 明らかにおかしいUTF8シーケンスがある場合4() {
     // }
 }
 
+#[test]
+fn 明らかにおかしいUTF8シーケンスがある場合5() {
+    // F3 91 83 F3
+    let mut bytes = [193, 163].to_vec();
+    let len = bytes.len();
+    dump(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes);
+    let expect_seq = [
+        DataSequence::Utf8("Hello".to_owned()),
+        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
+        DataSequence::Utf8("げふが".to_owned()),
+    ];
+    // assert_eq!(actual_seq.len(), expect_seq.len());
+    // for (i, seq) in actual_seq.iter().enumerate() {
+    //     assert_eq!(seq, &expect_seq[i]);
+    // }
+}
+
 fn dump(byte: &Vec<u8>) {
     for b in byte {
         print!("{:?} ", b);
@@ -229,17 +249,16 @@ fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
             (len - i, false)
         }
     };
-    if byte & 0xC0 == 0x80 {
-        // いきなり80が来たら異常なので異常なシーケンスを返す
-        (1, false)
-    } else if byte & 0xF8 == 0xF8 {
-        // F8は来ないはずなので異常なシーケンスを返す
-        (1, false)
-    } else if byte & 0xF8 == 0xF0 {
+    let condition = |start: u8, end: u8, bit_mask: u8| -> bool {
+        let first = byte; // & bit_mask;
+        start <= first && first <= end
+    };
+
+    if condition(0xF0, 0xF4, 0xF8) {
         valid(4)
-    } else if byte & 0xF0 == 0xE0 {
+    } else if condition(0xE0, 0xEF, 0xE0) {
         valid(3)
-    } else if byte & 0xE0 == 0xC0 {
+    } else if condition(0xC2, 0xDF, 0xC0) {
         valid(2)
     } else if byte & 0xff < 0x7f {
         (1, true)
