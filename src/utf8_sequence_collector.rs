@@ -21,6 +21,47 @@ fn バイナリデータからUTF8文字列とバイナリに分離する() {
         assert_eq!(seq, &expect_seq[i]);
     }
 }
+#[test]
+fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの先頭が不正() {
+    let mut bytes = "Helloほげふが".as_bytes().to_vec();
+
+    let len = bytes.len();
+    bytes[5] = 0;
+    dump(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes);
+    let expect_seq = [
+        DataSequence::Utf8("Hello\0".to_owned()),
+        DataSequence::BinaryArray(vec![129, 187]),
+        DataSequence::Utf8("げふが".to_owned()),
+    ];
+    for (i, seq) in actual_seq.iter().enumerate() {
+        assert_eq!(seq, &expect_seq[i]);
+    }
+}
+
+#[test]
+fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの途中が不正() {
+    let mut bytes = "Helloほげふが".as_bytes().to_vec();
+
+    let len = bytes.len();
+    bytes[6] = 0;
+    dump(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes);
+    let expect_seq = [
+        DataSequence::Utf8("Hello".to_owned()),
+        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
+        DataSequence::Utf8("げふが".to_owned()),
+    ];
+    for (i, seq) in actual_seq.iter().enumerate() {
+        assert_eq!(seq, &expect_seq[i]);
+    }
+}
+fn dump(byte: &Vec<u8>) {
+    for b in byte {
+        print!("{:x} ", b);
+    }
+    println!();
+}
 
 #[derive(Debug, PartialEq, PartialOrd)]
 pub enum DataSequence {
@@ -36,15 +77,27 @@ pub fn collect_utf8_sequences(byte: &Vec<u8>) -> Vec<DataSequence> {
     while i < byte.len() {
         let len = utf8_len(byte[i]);
         if len > 0 {
+            let mut v = Vec::new();
+            if i + len < byte.len() {
+                // 有効なシーケンスであるか確認する。
+                let mut valid_seq = true;
+                for n in 0..len {
+                    v.push(byte[i + n]);
+                    valid_seq = false;
+                }
+                // 有効なutf8シーケンスだったので、保存する。
+                if valid_seq {
+                    seq.append(&mut v);
+                }
+            } else {
+                // そもそも有効なシーケンスではなかったのでbinに保存する
+                bin.append(&mut v);
+            }
+            i += len;
             if bin.len() > 0 {
                 seq_list.push(DataSequence::BinaryArray(bin.clone()));
                 bin.truncate(0);
             }
-            // 有効なutf8シーケンスだったので、保存する。
-            for n in 0..len {
-                seq.push(byte[i + n]);
-            }
-            i += len;
         } else {
             // 有効なutf8シーケンスではない
             // 今までに収集されたシーケンスがあれば、シーケンスをStringにして保存する。
@@ -64,7 +117,11 @@ pub fn collect_utf8_sequences(byte: &Vec<u8>) -> Vec<DataSequence> {
 }
 
 fn utf8_len(byte: u8) -> usize {
-    if byte & 0xF8 == 0xF8 {
+    if byte & 0xC0 == 0x80 {
+        // いきなり80が来たら異常なので異常なシーケンスとして0を返す
+        0
+    } else if byte & 0xF8 == 0xF8 {
+        // F8は来ないはずなので異常なシーケンスとして0を返す
         0
     } else if byte & 0xF8 == 0xF0 {
         4
@@ -75,6 +132,7 @@ fn utf8_len(byte: u8) -> usize {
     } else if byte & 0xff < 0x7f {
         1
     } else {
+        // 上記以外であれば異常なシーケンスなので0を返す
         0
     }
 }
