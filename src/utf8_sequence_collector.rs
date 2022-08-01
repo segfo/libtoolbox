@@ -68,7 +68,31 @@ fn 明らかにおかしいUTF8シーケンスがある場合() {
     ]
     .to_vec();
     let len = bytes.len();
-    bytes[6] = 0;
+    dump(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes);
+    let expect_seq = [
+        DataSequence::Utf8("Hello".to_owned()),
+        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
+        DataSequence::Utf8("げふが".to_owned()),
+    ];
+    // assert_eq!(actual_seq.len(), expect_seq.len());
+    // for (i, seq) in actual_seq.iter().enumerate() {
+    //     assert_eq!(seq, &expect_seq[i]);
+    // }
+}
+
+#[test]
+fn 明らかにおかしいUTF8シーケンスがある場合2() {
+    // EB 89 92
+    // ED A5 9F
+    let mut bytes = [
+        // 235, 137, 155, 235, 137, 166, 238, 158, 143,
+        237, 165, 159, 237, 128, 159, 235, 138, 154, 74, 105, 123, 109, 62, 60, 235, 138, 160, 235,
+        139, 187, 235, 138, 187, 235, 139, 180, 235, 139, 129, 235, 137, 145, 235, 138, 131, 235,
+        137, 160, 231, 180, 151,
+    ]
+    .to_vec();
+    let len = bytes.len();
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes);
     let expect_seq = [
@@ -140,8 +164,9 @@ fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
         let first = byte_array[off + 0];
         if first == 0xE0 && 0x80 <= second && second <= 0x9F // 冗長な符号化
                 || first == 0xF0 && 0x80 <= second && second <= 0x8F // 冗長な符号化
-                || first == 0xF0 && 0xA0 <= second
-        // サロゲートペアの符号位置
+                || first == 0xED && 0xA0 <= second // サロゲートペアの符号位置
+                || first == 0xF4 && 0x90 <= second
+        // Unicodeの範囲外
         {
             true
         } else {
