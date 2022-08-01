@@ -106,6 +106,24 @@ fn 明らかにおかしいUTF8シーケンスがある場合2() {
     // }
 }
 
+#[test]
+fn 明らかにおかしいUTF8シーケンスがある場合3() {
+    // F3 91 83 F3
+    let mut bytes = [243, 145, 131, 243].to_vec();
+    let len = bytes.len();
+    dump(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes);
+    let expect_seq = [
+        DataSequence::Utf8("Hello".to_owned()),
+        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
+        DataSequence::Utf8("げふが".to_owned()),
+    ];
+    // assert_eq!(actual_seq.len(), expect_seq.len());
+    // for (i, seq) in actual_seq.iter().enumerate() {
+    //     assert_eq!(seq, &expect_seq[i]);
+    // }
+}
+
 fn dump(byte: &Vec<u8>) {
     for b in byte {
         print!("{:?} ", b);
@@ -176,8 +194,10 @@ fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
 
     let valid = |seq_len| -> (usize, bool) {
         if (len - i) >= seq_len {
-            for off in 0..seq_len {
-                if byte_array[off + i] & 0x80 != 0x80 || is_invalid_encode(i) {
+            for off in 1..seq_len {
+                if !(0x80 <= byte_array[off + i] && byte_array[off + i] < 0xBF)
+                    || is_invalid_encode(i)
+                {
                     return (seq_len, false);
                 }
             }
