@@ -58,6 +58,30 @@ fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの
         assert_eq!(seq, &expect_seq[i]);
     }
 }
+
+#[test]
+fn 明らかにおかしいUTF8シーケンスがある場合() {
+    let mut bytes = [
+        224, 130, 144, 224, 130, 173, 229, 149, 132, 230, 174, 148, 230, 139, 148, 224, 129, 145,
+        65, 98, 112, 102, 53, 55, 224, 129, 171, 224, 128, 176, 224, 129, 176, 224, 128, 191, 224,
+        128, 138, 224, 130, 154, 224, 129, 136, 224, 130, 171, 236, 191, 156,
+    ]
+    .to_vec();
+    let len = bytes.len();
+    bytes[6] = 0;
+    dump(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes);
+    let expect_seq = [
+        DataSequence::Utf8("Hello".to_owned()),
+        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
+        DataSequence::Utf8("げふが".to_owned()),
+    ];
+    // assert_eq!(actual_seq.len(), expect_seq.len());
+    // for (i, seq) in actual_seq.iter().enumerate() {
+    //     assert_eq!(seq, &expect_seq[i]);
+    // }
+}
+
 fn dump(byte: &Vec<u8>) {
     for b in byte {
         print!("{:?} ", b);
@@ -111,10 +135,24 @@ fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
     let byte = byte_array[index];
     let i = index;
     let len = byte_array.len();
+    let is_invalid_encode = |off| -> bool {
+        let second = byte_array[off + 1];
+        let first = byte_array[off + 0];
+        if first == 0xE0 && 0x80 <= second && second <= 0x9F // 冗長な符号化
+                || first == 0xF0 && 0x80 <= second && second <= 0x8F // 冗長な符号化
+                || first == 0xF0 && 0xA0 <= second
+        // サロゲートペアの符号位置
+        {
+            true
+        } else {
+            false
+        }
+    };
+
     let valid = |seq_len| -> (usize, bool) {
         if (len - i) >= seq_len {
             for off in 0..seq_len {
-                if byte_array[off + i] & 0x80 != 0x80 {
+                if byte_array[off + i] & 0x80 != 0x80 || is_invalid_encode(i) {
                     return (seq_len, false);
                 }
             }
