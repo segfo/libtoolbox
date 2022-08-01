@@ -9,13 +9,13 @@ fn バイナリデータからUTF8文字列とバイナリに分離する() {
     bytes[15] = 0xff;
     bytes[16] = 0xff;
     bytes[len - 7] = 0xf8;
-    let actual_seq = collect_utf8_sequences(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes).sequence;
     let expect_seq = [
-        DataSequence::Utf8("Helloほげ\x01\x02\x00".to_owned()),
-        DataSequence::BinaryArray(vec![0xff, 0xff, 0xff]),
-        DataSequence::Utf8("ふが".to_owned()),
-        DataSequence::BinaryArray(vec![0xf8]),
-        DataSequence::Utf8("NVAlid".to_owned()),
+        DataSequence::Utf8Sequence("Helloほげ\x01\x02\x00".to_owned()),
+        DataSequence::ByteSequence(vec![0xff, 0xff, 0xff]),
+        DataSequence::Utf8Sequence("ふが".to_owned()),
+        DataSequence::ByteSequence(vec![0xf8]),
+        DataSequence::Utf8Sequence("NVAlid".to_owned()),
     ];
     println!("{:?}", actual_seq);
     assert_eq!(actual_seq.len(), expect_seq.len());
@@ -30,11 +30,11 @@ fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの
     let len = bytes.len();
     bytes[5] = 0;
     dump(&bytes);
-    let actual_seq = collect_utf8_sequences(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes).sequence;
     let expect_seq = [
-        DataSequence::Utf8("Hello\0".to_owned()),
-        DataSequence::BinaryArray(vec![129, 187]),
-        DataSequence::Utf8("げふが".to_owned()),
+        DataSequence::Utf8Sequence("Hello\0".to_owned()),
+        DataSequence::ByteSequence(vec![129, 187]),
+        DataSequence::Utf8Sequence("げふが".to_owned()),
     ];
     assert_eq!(actual_seq.len(), expect_seq.len());
     for (i, seq) in actual_seq.iter().enumerate() {
@@ -49,11 +49,11 @@ fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの
     let len = bytes.len();
     bytes[6] = 0;
     dump(&bytes);
-    let actual_seq = collect_utf8_sequences(&bytes);
+    let actual_seq = collect_utf8_sequences(&bytes).sequence;
     let expect_seq = [
-        DataSequence::Utf8("Hello".to_owned()),
-        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
-        DataSequence::Utf8("げふが".to_owned()),
+        DataSequence::Utf8Sequence("Hello".to_owned()),
+        DataSequence::ByteSequence(vec![0xe3, 0, 187]),
+        DataSequence::Utf8Sequence("げふが".to_owned()),
     ];
     assert_eq!(actual_seq.len(), expect_seq.len());
     for (i, seq) in actual_seq.iter().enumerate() {
@@ -73,9 +73,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合() {
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes);
     let expect_seq = [
-        DataSequence::Utf8("Hello".to_owned()),
-        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
-        DataSequence::Utf8("げふが".to_owned()),
+        DataSequence::Utf8Sequence("Hello".to_owned()),
+        DataSequence::ByteSequence(vec![0xe3, 0, 187]),
+        DataSequence::Utf8Sequence("げふが".to_owned()),
     ];
     // assert_eq!(actual_seq.len(), expect_seq.len());
     // for (i, seq) in actual_seq.iter().enumerate() {
@@ -98,9 +98,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合2() {
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes);
     let expect_seq = [
-        DataSequence::Utf8("Hello".to_owned()),
-        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
-        DataSequence::Utf8("げふが".to_owned()),
+        DataSequence::Utf8Sequence("Hello".to_owned()),
+        DataSequence::ByteSequence(vec![0xe3, 0, 187]),
+        DataSequence::Utf8Sequence("げふが".to_owned()),
     ];
     // assert_eq!(actual_seq.len(), expect_seq.len());
     // for (i, seq) in actual_seq.iter().enumerate() {
@@ -116,9 +116,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合3() {
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes);
     let expect_seq = [
-        DataSequence::Utf8("Hello".to_owned()),
-        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
-        DataSequence::Utf8("げふが".to_owned()),
+        DataSequence::Utf8Sequence("Hello".to_owned()),
+        DataSequence::ByteSequence(vec![0xe3, 0, 187]),
+        DataSequence::Utf8Sequence("げふが".to_owned()),
     ];
     // assert_eq!(actual_seq.len(), expect_seq.len());
     // for (i, seq) in actual_seq.iter().enumerate() {
@@ -139,9 +139,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合4() {
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes);
     let expect_seq = [
-        DataSequence::Utf8("Hello".to_owned()),
-        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
-        DataSequence::Utf8("げふが".to_owned()),
+        DataSequence::Utf8Sequence("Hello".to_owned()),
+        DataSequence::ByteSequence(vec![0xe3, 0, 187]),
+        DataSequence::Utf8Sequence("げふが".to_owned()),
     ];
     // assert_eq!(actual_seq.len(), expect_seq.len());
     // for (i, seq) in actual_seq.iter().enumerate() {
@@ -157,9 +157,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合5() {
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes);
     let expect_seq = [
-        DataSequence::Utf8("Hello".to_owned()),
-        DataSequence::BinaryArray(vec![0xe3, 0, 187]),
-        DataSequence::Utf8("げふが".to_owned()),
+        DataSequence::Utf8Sequence("Hello".to_owned()),
+        DataSequence::ByteSequence(vec![0xe3, 0, 187]),
+        DataSequence::Utf8Sequence("げふが".to_owned()),
     ];
     // assert_eq!(actual_seq.len(), expect_seq.len());
     // for (i, seq) in actual_seq.iter().enumerate() {
@@ -174,23 +174,70 @@ fn dump(byte: &Vec<u8>) {
     println!();
 }
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum DataSequence {
-    Utf8(String),
-    BinaryArray(Vec<u8>),
+    Utf8Sequence(String),
+    ByteSequence(Vec<u8>),
 }
 
-pub fn collect_utf8_sequences(byte: &Vec<u8>) -> Vec<DataSequence> {
+pub struct SequenceData {
+    sequence: Vec<DataSequence>,
+    byte_sequence_total_len: usize,
+    utf8_sequence_total_len: usize,
+    string_total_len: usize,
+}
+
+impl SequenceData {
+    pub fn get_sequence(&self) -> Vec<DataSequence> {
+        self.sequence.clone()
+    }
+    pub fn get_total_bytes(&self) -> usize {
+        self.byte_sequence_total_len + self.utf8_sequence_total_len
+    }
+    pub fn get_byte_sequence_bytes(&self) -> usize {
+        self.byte_sequence_total_len
+    }
+    pub fn get_utf8_sequence_bytes(&self) -> usize {
+        self.utf8_sequence_total_len
+    }
+    pub fn get_total_string_length(&self) -> usize {
+        self.string_total_len
+    }
+
+    pub fn collect_sequence_data(sequence: Vec<DataSequence>) -> Self {
+        let mut byte_sequence_total_len = 0;
+        let mut string_total_len = 0;
+        let mut utf8_sequence_total_len = 0;
+        for ds in &sequence {
+            match ds {
+                DataSequence::Utf8Sequence(s) => {
+                    utf8_sequence_total_len += s.bytes().len();
+                    string_total_len += s.len();
+                }
+                DataSequence::ByteSequence(bytes) => byte_sequence_total_len += bytes.len(),
+            }
+        }
+        SequenceData {
+            sequence: sequence,
+            byte_sequence_total_len: byte_sequence_total_len,
+            utf8_sequence_total_len: utf8_sequence_total_len,
+            string_total_len: string_total_len,
+        }
+    }
+}
+
+pub fn collect_utf8_sequences(byte: &Vec<u8>) -> SequenceData {
     let mut i = 0;
     let mut seq_list = Vec::new();
     let mut seq = Vec::new();
     let mut bin = Vec::new();
+
     while i < byte.len() {
         let (len, valid) = utf8_len(byte, i);
         if valid {
             // 有効なシーケンスがあったら記録していく
             if bin.len() > 0 {
-                seq_list.push(DataSequence::BinaryArray(bin.clone()));
+                seq_list.push(DataSequence::ByteSequence(bin.clone()));
                 bin.truncate(0);
             }
             for off in 0..len {
@@ -200,7 +247,9 @@ pub fn collect_utf8_sequences(byte: &Vec<u8>) -> Vec<DataSequence> {
             // 有効なutf8シーケンスではない
             // 今までに収集された有効なUTF-8シーケンスがあれば、シーケンスをStringにして保存する。
             if seq.len() > 0 {
-                seq_list.push(DataSequence::Utf8(String::from_utf8(seq.clone()).unwrap()));
+                seq_list.push(DataSequence::Utf8Sequence(
+                    String::from_utf8(seq.clone()).unwrap(),
+                ));
                 seq.truncate(0);
             }
             // 有効でないシーケンスもとりあえず保存しておく
@@ -211,9 +260,14 @@ pub fn collect_utf8_sequences(byte: &Vec<u8>) -> Vec<DataSequence> {
         i += len;
     }
     if seq.len() > 0 {
-        seq_list.push(DataSequence::Utf8(String::from_utf8(seq.clone()).unwrap()));
+        seq_list.push(DataSequence::Utf8Sequence(
+            String::from_utf8(seq.clone()).unwrap(),
+        ));
     }
-    seq_list
+    if bin.len() > 0 {
+        seq_list.push(DataSequence::ByteSequence(bin.clone()));
+    }
+    SequenceData::collect_sequence_data(seq_list)
 }
 
 fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
