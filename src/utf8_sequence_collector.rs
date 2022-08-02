@@ -334,8 +334,9 @@ fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
     for seq_len in 0..=range.len() - 1 {
         if condition(byte, range[seq_len].start, range[seq_len].end) {
             // シーケンス長 = range.len() - seq_len
-            return validation(4 - seq_len, byte_array, i);
+            return validation(range.len() - seq_len, byte_array, i);
         }
     }
+    // バイナリでしか表現できない場合は、以下が実行される
     validation(0, byte_array, i)
 }
