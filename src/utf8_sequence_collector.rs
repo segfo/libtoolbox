@@ -274,7 +274,14 @@ fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
         }
     };
     // バリデーションを担う
-    let validation = |seq_len| -> (usize, bool) {
+    let validation = |seq_len, byte: &Vec<u8>, index| -> (usize, bool) {
+        let len = byte.len();
+        let i = index;
+        match seq_len {
+            0 => return (1, false), // UTF-8でも無くAsciiでもない
+            1 => return (1, true),  // Asciiだった
+            _ => { /* 後続の処理を行うのでここには書かない */ }
+        }
         if (len - i) >= seq_len {
             for off in 1..seq_len {
                 if !(0x80 <= byte_array[off + i] && byte_array[off + i] < 0xBF)
@@ -291,25 +298,35 @@ fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
             panic!("illegal index");
         }
     };
-    let condition = |start: u8, end: u8| -> bool {
-        let first = byte;
-        start <= first && first <= end
-    };
+    let condition = |first, start: u8, end: u8| -> bool { start <= first && first <= end };
 
-    if condition(0xF0, 0xF4) {
-        // 4バイト文字
-        validation(4)
-    } else if condition(0xE0, 0xEF) {
-        // 3バイト文字
-        validation(3)
-    } else if condition(0xC2, 0xDF) {
-        // 2バイト文字
-        validation(2)
-    } else if byte & 0xff < 0x7f {
-        // Ascii文字
-        (1, true)
-    } else {
-        // UTF-8では表現不能なバイト
-        (1, false)
+    struct NumberRange {
+        start: u8,
+        end: u8,
     }
+    let range = [
+        NumberRange {
+            start: 0xF0,
+            end: 0xF4,
+        },
+        NumberRange {
+            start: 0xE0,
+            end: 0xEF,
+        },
+        NumberRange {
+            start: 0xC2,
+            end: 0xDF,
+        },
+        NumberRange {
+            start: 0x00,
+            end: 0x7f,
+        },
+    ];
+    for seq_len in 0..=range.len() - 1 {
+        if condition(byte, range[seq_len].start, range[seq_len].end) {
+            // シーケンス長 = range.len() - seq_len
+            return validation(range.len() - seq_len, byte_array, i);
+        }
+    }
+    validation(0, byte_array, i)
 }
