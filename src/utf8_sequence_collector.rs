@@ -1,4 +1,5 @@
 #[test]
+#[allow(non_snake_case)]
 fn バイナリデータからUTF8文字列とバイナリに分離する() {
     let mut bytes = "Helloほげ\x01\x02\x00\x00\x00\x00ふがINVAlid"
         .as_bytes()
@@ -24,6 +25,7 @@ fn バイナリデータからUTF8文字列とバイナリに分離する() {
     }
 }
 #[test]
+#[allow(non_snake_case)]
 fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの先頭が不正() {
     let mut bytes = "Helloほげふが".as_bytes().to_vec();
 
@@ -42,6 +44,7 @@ fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの途中が不正() {
     let mut bytes = "Helloほげふが".as_bytes().to_vec();
 
@@ -60,8 +63,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合_シーケンスの
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn 明らかにおかしいUTF8シーケンスがある場合() {
-    let mut bytes = [
+    let bytes = [
         224, 130, 144, 224, 130, 173, 229, 149, 132, 230, 174, 148, 230, 139, 148, 224, 129, 145,
         65, 98, 112, 102, 53, 55, 224, 129, 171, 224, 128, 176, 224, 129, 176, 224, 128, 191, 224,
         128, 138, 224, 130, 154, 224, 129, 136, 224, 130, 171, 236, 191, 156,
@@ -72,8 +76,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn 明らかにおかしいUTF8シーケンスがある場合2() {
-    let mut bytes = [
+    let bytes = [
         // 235, 137, 155, 235, 137, 166, 238, 158, 143,
         237, 165, 159, 237, 128, 159, 235, 138, 154, 74, 105, 123, 109, 62, 60, 235, 138, 160, 235,
         139, 187, 235, 138, 187, 235, 139, 180, 235, 139, 129, 235, 137, 145, 235, 138, 131, 235,
@@ -85,8 +90,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合2() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn 明らかにおかしいUTF8シーケンスがある場合3() {
-    let mut bytes = [0xF3, 0x91, 0x83, 0xF3].to_vec();
+    let bytes = [0xF3, 0x91, 0x83, 0xF3].to_vec();
     dump(&bytes);
     collect_utf8_sequences(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes).get_sequence();
@@ -98,8 +104,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合3() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn 明らかにおかしいUTF8シーケンスがある場合4() {
-    let mut bytes = [
+    let bytes = [
         251, 153, 139, 251, 153, 182, 254, 142, 159, 253, 181, 143, 253, 144, 143, 251, 154, 138,
         90, 121, 107, 125, 46, 44, 251, 154, 176, 251, 155, 171, 251, 154, 171, 251, 155, 164, 251,
         155, 145, 251, 153, 129, 251, 154, 147, 251, 153, 176, 247, 164, 135,
@@ -110,8 +117,9 @@ fn 明らかにおかしいUTF8シーケンスがある場合4() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn 明らかにおかしいUTF8シーケンスがある場合5() {
-    let mut bytes = [0xC1, 0xA3].to_vec();
+    let bytes = [0xC1, 0xA3].to_vec();
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes).get_sequence();
     let expect_seq = [DataSequence::ByteSequence(vec![0xC1, 0xA3])];
@@ -123,7 +131,7 @@ fn 明らかにおかしいUTF8シーケンスがある場合5() {
 
 #[test]
 fn 冗長な符号化() {
-    let mut bytes = [0x2F, 0xC0, 0xAF, 0xE0, 0x80, 0xAF, 0xF0, 0x80, 0x80, 0xAF].to_vec();
+    let bytes = [0x2F, 0xC0, 0xAF, 0xE0, 0x80, 0xAF, 0xF0, 0x80, 0x80, 0xAF].to_vec();
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes).sequence;
     let expect_seq = [
@@ -137,8 +145,9 @@ fn 冗長な符号化() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn 符号化されたBOM() {
-    let mut bytes = [0xEF, 0xBB, 0xBF].to_vec();
+    let bytes = [0xEF, 0xBB, 0xBF].to_vec();
     dump(&bytes);
     let actual_seq = collect_utf8_sequences(&bytes).sequence;
     let expect_seq = [DataSequence::ByteSequence(vec![0xEF, 0xBB, 0xBF])];
@@ -148,6 +157,7 @@ fn 符号化されたBOM() {
     }
 }
 
+#[allow(dead_code)]
 fn dump(byte: &Vec<u8>) {
     for b in byte {
         print!("{:?} ", b);
