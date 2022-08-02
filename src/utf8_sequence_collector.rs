@@ -257,7 +257,6 @@ pub fn collect_utf8_sequences(byte: &Vec<u8>) -> SequenceData {
 fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
     let byte = byte_array[index];
     let i = index;
-    let len = byte_array.len();
     // 不正なUTF-8エンコードかどうかを確認する
     let is_invalid_encode = |off| -> bool {
         let second = byte_array[off + 1];
