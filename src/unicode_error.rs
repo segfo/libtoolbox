@@ -1,6 +1,6 @@
 //
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum UnicodeErrorKind {
+pub enum UnicodeParseErrorKind {
     IllegalByteSequence,
     RedundantEncoding,
     IllegalCodePoint,
@@ -9,12 +9,15 @@ pub enum UnicodeErrorKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UnicodeParseError {
-    kind: UnicodeErrorKind,
+    kind: UnicodeParseErrorKind,
 }
 
 impl UnicodeParseError {
-    pub fn new(kind: UnicodeErrorKind) -> Self {
+    pub fn new(kind: UnicodeParseErrorKind) -> Self {
         UnicodeParseError { kind: kind }
+    }
+    pub fn get_error(&self) -> UnicodeParseErrorKind {
+        self.kind
     }
 }
 

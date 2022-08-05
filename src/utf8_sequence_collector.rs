@@ -1,4 +1,4 @@
-use crate::unicode_error::UnicodeParseError;
+use crate::unicode_error::{UnicodeParseError, UnicodeParseErrorKind};
 
 #[test]
 #[allow(non_snake_case)]
@@ -159,6 +159,107 @@ fn 符号化されたBOM() {
     }
 }
 
+#[test]
+fn utf8_validate_符号化されたBOM() {
+    let bytes = [0xEF, 0xBB, 0xBF].to_vec();
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, false);
+    assert_eq!(actual_info.len, 3);
+    assert_eq!(
+        actual_info.error.unwrap().get_error(),
+        UnicodeParseErrorKind::IllegalRange
+    );
+}
+
+#[test]
+fn utf8_validate_符号化されたBOM_バッファ尻切れトンボ() {
+    let bytes = [0xEF, 0xBB].to_vec();
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, false);
+    assert_eq!(actual_info.len, bytes.len());
+    assert_eq!(
+        actual_info.error.unwrap().get_error(),
+        UnicodeParseErrorKind::IllegalByteSequence
+    );
+}
+#[test]
+fn utf8_validate_1バイト_基本() {
+    let bytes = "A".as_bytes().to_vec();
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, true);
+    assert_eq!(actual_info.len, bytes.len());
+    assert!(actual_info.error.is_none());
+}
+#[test]
+fn utf8_validate_2バイト_基本() {
+    let bytes = "§".as_bytes().to_vec();
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, true);
+    assert_eq!(actual_info.len, bytes.len());
+    assert!(actual_info.error.is_none());
+}
+#[test]
+fn utf8_validate_2バイト_バッファ尻切れトンボ() {
+    let mut bytes = "§".as_bytes().to_vec();
+    bytes.truncate(bytes.len() - 1);
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, false);
+    assert_eq!(actual_info.len, bytes.len());
+    assert_eq!(
+        actual_info.error.unwrap().get_error(),
+        UnicodeParseErrorKind::IllegalByteSequence
+    );
+}
+#[test]
+fn utf8_validate_3バイト_基本() {
+    let bytes = "あ".as_bytes().to_vec();
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, true);
+    assert_eq!(actual_info.len, bytes.len());
+    assert!(actual_info.error.is_none());
+}
+#[test]
+fn utf8_validate_3バイト_バッファ尻切れトンボ() {
+    let mut bytes = "あ".as_bytes().to_vec();
+    bytes.truncate(bytes.len() - 1);
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, false);
+    assert_eq!(actual_info.len, bytes.len());
+    assert_eq!(
+        actual_info.error.unwrap().get_error(),
+        UnicodeParseErrorKind::IllegalByteSequence
+    );
+}
+#[test]
+fn utf8_validate_4バイト_基本() {
+    let bytes = "🍺".as_bytes().to_vec();
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, true);
+    assert_eq!(actual_info.len, bytes.len());
+    assert!(actual_info.error.is_none());
+}
+#[test]
+fn utf8_validate_4バイト_バッファ尻切れトンボ() {
+    let mut bytes = "🍺".as_bytes().to_vec();
+    bytes.truncate(bytes.len() - 1);
+    dump(&bytes);
+    let actual_info = utf8_validate(&bytes, 0);
+    assert_eq!(actual_info.valid, false);
+    assert_eq!(actual_info.len, bytes.len());
+    assert_eq!(
+        actual_info.error.unwrap().get_error(),
+        UnicodeParseErrorKind::IllegalByteSequence
+    );
+}
+
 #[allow(dead_code)]
 fn dump(byte: &Vec<u8>) {
     for b in byte {
@@ -299,10 +400,16 @@ pub fn utf8_validate(byte_array: &Vec<u8>, offset: usize) -> Utf8SequenceInfo {
         let second = seq[1];
         let first = seq[0];
         let error = match (first, second) {
-            (0xE0, 0x80..=0x9F) => Some(crate::unicode_error::UnicodeErrorKind::RedundantEncoding), // 冗長な符号化
-            (0xF0, 0x80..=0x8F) => Some(crate::unicode_error::UnicodeErrorKind::RedundantEncoding), // 冗長な符号化
-            (0xED, 0xA0..=0xFF) => Some(crate::unicode_error::UnicodeErrorKind::IllegalCodePoint), // サロゲートペアの符号位置
-            (0xF4, 0x90..=0xFF) => Some(crate::unicode_error::UnicodeErrorKind::IllegalRange), // Unicodeの範囲外
+            (0xE0, 0x80..=0x9F) => {
+                Some(crate::unicode_error::UnicodeParseErrorKind::RedundantEncoding)
+            } // 冗長な符号化
+            (0xF0, 0x80..=0x8F) => {
+                Some(crate::unicode_error::UnicodeParseErrorKind::RedundantEncoding)
+            } // 冗長な符号化
+            (0xED, 0xA0..=0xFF) => {
+                Some(crate::unicode_error::UnicodeParseErrorKind::IllegalCodePoint)
+            } // サロゲートペアの符号位置
+            (0xF4, 0x90..=0xFF) => Some(crate::unicode_error::UnicodeParseErrorKind::IllegalRange), // Unicodeの範囲外
             (_, _) => None,
         };
         if error.is_some() {
@@ -326,7 +433,7 @@ pub fn utf8_validate(byte_array: &Vec<u8>, offset: usize) -> Utf8SequenceInfo {
                 if !(0x80 <= byte_array[off + i] && byte_array[off + i] < 0xBF) {
                     let mut r = Utf8SequenceInfo::new(seq_len, false);
                     r.set_error(UnicodeParseError::new(
-                        crate::unicode_error::UnicodeErrorKind::IllegalRange,
+                        crate::unicode_error::UnicodeParseErrorKind::IllegalRange,
                     ));
                     return r;
                 }
@@ -345,7 +452,7 @@ pub fn utf8_validate(byte_array: &Vec<u8>, offset: usize) -> Utf8SequenceInfo {
             // 残りのデータ配列全体の長さが、指定されたシーケンスの長さよりも短い
             let mut r = Utf8SequenceInfo::new(len - i, false);
             r.set_error(UnicodeParseError::new(
-                crate::unicode_error::UnicodeErrorKind::IllegalByteSequence,
+                crate::unicode_error::UnicodeParseErrorKind::IllegalByteSequence,
             ));
             r
         } else {
