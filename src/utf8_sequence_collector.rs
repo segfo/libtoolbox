@@ -1,3 +1,5 @@
+use crate::unicode_error::UnicodeParseError;
+
 #[test]
 #[allow(non_snake_case)]
 fn バイナリデータからUTF8文字列とバイナリに分離する() {
@@ -165,6 +167,30 @@ fn dump(byte: &Vec<u8>) {
     println!();
 }
 
+pub struct Utf8SequenceInfo {
+    len: usize,
+    valid: bool,
+    error: Option<crate::unicode_error::UnicodeParseError>,
+}
+impl Utf8SequenceInfo {
+    fn new(len: usize, valid: bool) -> Self {
+        Utf8SequenceInfo {
+            len: len,
+            valid: valid,
+            error: None,
+        }
+    }
+    pub fn get_len_valid(&self) -> (usize, bool) {
+        (self.len, self.valid)
+    }
+    pub fn set_error(&mut self, error: crate::unicode_error::UnicodeParseError) {
+        self.error = Some(error)
+    }
+    pub fn get_error(&self) -> Option<crate::unicode_error::UnicodeParseError> {
+        self.error.clone()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum DataSequence {
     Utf8Sequence(String),
@@ -224,7 +250,8 @@ pub fn collect_utf8_sequences(byte: &Vec<u8>) -> SequenceData {
     let mut bin_seq = Vec::new();
 
     while i < byte.len() {
-        let (len, valid) = utf8_len(byte, i);
+        let info = utf8_validate(byte, i);
+        let (len, valid) = (info.len, info.valid);
         if valid {
             // 有効なシーケンスがあったら記録していく
             if bin_seq.len() > 0 {
@@ -264,44 +291,63 @@ pub fn collect_utf8_sequences(byte: &Vec<u8>) -> SequenceData {
 // indexの位置にあるバイトデータをUTF-8の1文字目と仮定して扱う。
 // 明らかに1文字目でもないしUTF-8のルールに違反している場合はバイナリデータとして扱うように(n,false)を返す。
 // なお、n>=1とする。
-fn utf8_len(byte_array: &Vec<u8>, index: usize) -> (usize, bool) {
-    let byte = byte_array[index];
-    let i = index;
+pub fn utf8_validate(byte_array: &Vec<u8>, offset: usize) -> Utf8SequenceInfo {
+    let byte = byte_array[offset];
+    let i = offset;
     // 不正なUTF-8エンコードかどうかを確認する
-    let is_invalid_encode = |off| -> bool {
-        let second = byte_array[off + 1];
-        let first = byte_array[off + 0];
-        if first == 0xE0 && 0x80 <= second && second <= 0x9F // 冗長な符号化
-                || first == 0xF0 && 0x80 <= second && second <= 0x8F // 冗長な符号化
-                || first == 0xED && 0xA0 <= second // サロゲートペアの符号位置
-                || first == 0xF4 && 0x90 <= second
-        // Unicodeの範囲外
-        {
-            true
+    let validate_encoding = |seq: &[u8]| -> Option<crate::unicode_error::UnicodeParseError> {
+        let second = seq[1];
+        let first = seq[0];
+        let error = match (first, second) {
+            (0xE0, 0x80..=0x9F) => Some(crate::unicode_error::UnicodeErrorKind::RedundantEncoding), // 冗長な符号化
+            (0xF0, 0x80..=0x8F) => Some(crate::unicode_error::UnicodeErrorKind::RedundantEncoding), // 冗長な符号化
+            (0xED, 0xA0..=0xFF) => Some(crate::unicode_error::UnicodeErrorKind::IllegalCodePoint), // サロゲートペアの符号位置
+            (0xF4, 0x90..=0xFF) => Some(crate::unicode_error::UnicodeErrorKind::IllegalRange), // Unicodeの範囲外
+            (_, _) => None,
+        };
+        if error.is_some() {
+            Some(crate::unicode_error::UnicodeParseError::new(error.unwrap()))
         } else {
-            false
+            None
         }
     };
     // バリデーションを担う
-    let validation = |seq_len, byte: &Vec<u8>, index| -> (usize, bool) {
+    let validation = |seq_len, byte: &Vec<u8>, index| -> Utf8SequenceInfo {
         let len = byte.len();
         let i = index;
         match seq_len {
-            0 => return (1, false), // UTF-8でも無くAsciiでもない
-            1 => return (1, true),  // Asciiだった
+            0 => return Utf8SequenceInfo::new(1, false), // utf-8でも無くAsciiでもない
+            1 => return Utf8SequenceInfo::new(1, true),  // Asciiだった
             _ => { /* 後続の処理を行うのでここには書かない */ }
         }
         if (len - i) >= seq_len {
+            // 2バイト以降の値が範囲外でないかを検証する。
             for off in 1..seq_len {
-                if !(0x80 <= byte_array[off + i] && byte_array[off + i] < 0xBF)
-                    || is_invalid_encode(i)
-                {
-                    return (seq_len, false);
+                if !(0x80 <= byte_array[off + i] && byte_array[off + i] < 0xBF) {
+                    let mut r = Utf8SequenceInfo::new(seq_len, false);
+                    r.set_error(UnicodeParseError::new(
+                        crate::unicode_error::UnicodeErrorKind::IllegalRange,
+                    ));
+                    return r;
                 }
             }
-            (seq_len, true)
+            // 一応2バイト以降がutf-8シーケンスっぽかったので
+            // 今度は1バイト目も含めて、2バイト目以降が正しくエンコードされていそうか検証する。
+            let error = validate_encoding(&byte[i..i + seq_len]);
+            if error.is_some() {
+                let mut r = Utf8SequenceInfo::new(seq_len, false);
+                r.set_error(error.unwrap());
+                r
+            } else {
+                Utf8SequenceInfo::new(seq_len, true)
+            }
         } else if len > i {
-            (len - i, false)
+            // 残りのデータ配列全体の長さが、指定されたシーケンスの長さよりも短い
+            let mut r = Utf8SequenceInfo::new(len - i, false);
+            r.set_error(UnicodeParseError::new(
+                crate::unicode_error::UnicodeErrorKind::IllegalByteSequence,
+            ));
+            r
         } else {
             // あり得ないが、一応処理を入れておく。
             panic!("illegal index");
