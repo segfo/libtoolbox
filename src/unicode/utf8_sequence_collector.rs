@@ -1,5 +1,5 @@
 use crate::unicode::error::{UnicodeParseError, UnicodeParseErrorKind};
-
+use crate::unicode::sequence_data::*;
 pub struct Utf8SequenceInfo {
     len: usize,
     valid: bool,
@@ -13,6 +13,22 @@ impl Utf8SequenceInfo {
             error: None,
         }
     }
+    /**
+     * 使い方
+     * ```
+     * use toolbox::unicode::utf8_sequence_collector::{
+     *     Utf8SequenceInfo,
+     *     utf8_validate
+     * };
+     * // 4バイトコードの文字
+     * let s = "🍺".as_bytes().to_vec();
+     * let result = utf8_validate(&s, 0);
+     * // ↓↓↓使い方↓↓↓
+     * let (len, valid) = result.get_len_valid();
+     * assert_eq!(len, 4); // 長さが4バイト
+     * assert_eq!(valid, true); // UTF-8シーケンスとして有効かどうか
+     * ```
+     */
     pub fn get_len_valid(&self) -> (usize, bool) {
         (self.len, self.valid)
     }
@@ -21,58 +37,6 @@ impl Utf8SequenceInfo {
     }
     pub fn get_error(&self) -> Option<UnicodeParseError> {
         self.error.clone()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum DataSequence {
-    Utf8Sequence(String),
-    ByteSequence(Vec<u8>),
-}
-
-pub struct SequenceData {
-    sequence: Vec<DataSequence>,
-    byte_sequence_total_len: usize,
-    utf8_sequence_total_len: usize,
-    string_total_len: usize,
-}
-
-impl SequenceData {
-    pub fn get_sequence(&self) -> Vec<DataSequence> {
-        self.sequence.clone()
-    }
-    pub fn get_total_bytes(&self) -> usize {
-        self.byte_sequence_total_len + self.utf8_sequence_total_len
-    }
-    pub fn get_byte_sequence_bytes(&self) -> usize {
-        self.byte_sequence_total_len
-    }
-    pub fn get_utf8_sequence_bytes(&self) -> usize {
-        self.utf8_sequence_total_len
-    }
-    pub fn get_total_string_length(&self) -> usize {
-        self.string_total_len
-    }
-
-    pub fn collect_sequence_data(sequence: Vec<DataSequence>) -> Self {
-        let mut byte_sequence_total_len = 0;
-        let mut string_total_len = 0;
-        let mut utf8_sequence_total_len = 0;
-        for ds in &sequence {
-            match ds {
-                DataSequence::Utf8Sequence(s) => {
-                    utf8_sequence_total_len += s.bytes().len();
-                    string_total_len += s.len();
-                }
-                DataSequence::ByteSequence(bytes) => byte_sequence_total_len += bytes.len(),
-            }
-        }
-        SequenceData {
-            sequence: sequence,
-            byte_sequence_total_len: byte_sequence_total_len,
-            utf8_sequence_total_len: utf8_sequence_total_len,
-            string_total_len: string_total_len,
-        }
     }
 }
 
@@ -149,8 +113,12 @@ pub fn utf8_validate(byte_array: &Vec<u8>, offset: usize) -> Utf8SequenceInfo {
         let len = byte.len();
         let i = index;
         match seq_len {
-            0 => return Utf8SequenceInfo::new(1, false), // utf-8でも無くAsciiでもない
-            1 => return Utf8SequenceInfo::new(1, true),  // Asciiだった
+            0 => {
+                let mut info = Utf8SequenceInfo::new(1, false);
+                info.set_error(UnicodeParseError::new(UnicodeParseErrorKind::IllegalRange));
+                return info;
+            } // utf-8でも無くAsciiでもない
+            1 => return Utf8SequenceInfo::new(1, true), // Asciiだった
             _ => { /* 後続の処理を行うのでここには書かない */ }
         }
         if (len - i) >= seq_len {

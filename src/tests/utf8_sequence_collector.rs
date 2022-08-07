@@ -1,4 +1,5 @@
 use crate::unicode::error::{UnicodeParseError, UnicodeParseErrorKind};
+use crate::unicode::sequence_data::*;
 use crate::unicode::utf8_sequence_collector::*;
 #[allow(dead_code)]
 fn dump(byte: &Vec<u8>) {
@@ -210,7 +211,6 @@ fn utf8_validate_2バイト_基本() {
     dump(&bytes);
     let actual_info = utf8_validate(&bytes, 0);
     let (len, valid) = actual_info.get_len_valid();
-    let (len, valid) = actual_info.get_len_valid();
     assert_eq!(valid, true);
     assert_eq!(len, bytes.len());
     assert!(actual_info.get_error().is_none());
@@ -277,3 +277,40 @@ fn utf8_validate_4バイト_バッファ尻切れトンボ() {
         UnicodeParseErrorKind::IllegalByteSequence
     );
 }
+
+macro_rules! test_utf8_validate_invalid_byte {
+    ($id:ident,$v:expr) => {
+        #[test]
+        fn $id() {
+            let bytes = $v.to_vec();
+            dump(&bytes);
+            let actual_info = utf8_validate(&bytes, 0);
+            let (len, valid) = actual_info.get_len_valid();
+            assert_eq!(valid, false);
+            assert_eq!(len, bytes.len());
+            assert_eq!(
+                actual_info.get_error().unwrap().get_error(),
+                UnicodeParseErrorKind::IllegalRange
+            );
+        }
+    };
+    ($id:ident,$v:expr,$vv:expr) => {
+        test_utf8_validate_invalid_byte!(
+            $id,
+            || -> Vec<u8> {
+                let mut v = $v.to_owned().as_bytes().to_vec();
+                let len = v.len();
+                v[len - 1] = $vv;
+                v
+            }()
+        );
+    };
+}
+test_utf8_validate_invalid_byte!(utf8_validate_1バイト_不正なバイト1, [0x80]);
+test_utf8_validate_invalid_byte!(utf8_validate_1バイト_不正なバイト2, [0xFF]);
+test_utf8_validate_invalid_byte!(utf8_validate_2バイト_不正なバイト1, "§", 0x7F);
+test_utf8_validate_invalid_byte!(utf8_validate_2バイト_不正なバイト2, "§", 0xC0);
+test_utf8_validate_invalid_byte!(utf8_validate_3バイト_不正なバイト1, "あ", 0x7F);
+test_utf8_validate_invalid_byte!(utf8_validate_3バイト_不正なバイト2, "あ", 0xC0);
+test_utf8_validate_invalid_byte!(utf8_validate_4バイト_不正なバイト1, "🍺", 0x7F);
+test_utf8_validate_invalid_byte!(utf8_validate_4バイト_不正なバイト2, "🍺", 0xC0);

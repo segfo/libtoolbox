@@ -1,5 +1,84 @@
+use crate::unicode::sequence_data::*;
 use crate::unicode::utf32_encoder::utf8char_to_utf32char;
 use crate::unicode::utf8_sequence_collector::utf8_validate;
+// pub fn collect_utf32_sequences(byte: &Vec<u32>) -> SequenceData {
+//     let mut i = 0;
+//     let mut seqdata_list = Vec::new();
+//     let mut utf8_seq = Vec::new();
+//     let mut bin_seq = Vec::new();
+
+//     while i < byte.len() {
+//         let info = utf8_validate(byte, i);
+//         let (len, valid) = info.get_len_valid();
+//         if valid {
+//             // 有効なシーケンスがあったら記録していく
+//             if bin_seq.len() > 0 {
+//                 seqdata_list.push(DataSequence::ByteSequence(bin_seq.clone()));
+//                 bin_seq.truncate(0);
+//             }
+//             for off in 0..len {
+//                 utf8_seq.push(byte[i + off]);
+//             }
+//         } else {
+//             // 有効なutf8シーケンスではない
+//             // 今までに収集された有効なUTF-8シーケンスがあれば、シーケンスをStringにして保存する。
+//             if utf8_seq.len() > 0 {
+//                 seqdata_list.push(DataSequence::Utf8Sequence(
+//                     String::from_utf8(utf8_seq.clone()).unwrap(),
+//                 ));
+//                 utf8_seq.truncate(0);
+//             }
+//             // 有効でないシーケンスもとりあえず保存しておく
+//             for off in 0..len {
+//                 bin_seq.push(byte[i + off]);
+//             }
+//         }
+//         i += len;
+//     }
+//     if utf8_seq.len() > 0 {
+//         seqdata_list.push(DataSequence::Utf8Sequence(
+//             String::from_utf8(utf8_seq.clone()).unwrap(),
+//         ));
+//     }
+//     if bin_seq.len() > 0 {
+//         seqdata_list.push(DataSequence::ByteSequence(bin_seq.clone()));
+//     }
+//     SequenceData::collect_sequence_data(seqdata_list)
+// }
+
+use crate::unicode::error::*;
+pub fn utf32_to_string(utf32_array: &Vec<u32>) -> Result<String, Box<UnicodeParseError>> {
+    let mut utf8 = Vec::new();
+    for utf32 in utf32_array {
+        match utf32 {
+            0..=0x7F => {
+                utf8.push((utf32 & 0x7F) as u8);
+            }
+            0x0000_0080..=0x0000_07FF => {
+                utf8.push(0xC0 | (utf32 >> 6) as u8);
+                utf8.push(0x80 | (utf32 & 0x3F) as u8);
+            }
+            // 0x0000_D800-0x0000_DFFFはサロゲートペアのコードポイントのため2バイトコードではない
+            0x0000_0800..=0x0000_D7FF | 0x0000_E000..=0x0000_FFFF => {
+                utf8.push(0xE0 | (utf32 >> 12) as u8);
+                utf8.push(0x80 | (utf32 >> 6) as u8 & 0x3F);
+                utf8.push(0x80 | (utf32 & 0x3F) as u8);
+            }
+            0x0001_0000..=0x0010_FFFF => {
+                utf8.push(0xF0 | (utf32 >> 18) as u8);
+                utf8.push(0x80 | (utf32 >> 12) as u8 & 0x3F);
+                utf8.push(0x80 | (utf32 >> 6) as u8 & 0x3F);
+                utf8.push(0x80 | (utf32 & 0x3F) as u8);
+            }
+            _ => {
+                return Err(Box::new(UnicodeParseError::new(
+                    UnicodeParseErrorKind::IllegalRange,
+                )));
+            }
+        }
+    }
+    Ok(String::from_utf8(utf8).unwrap())
+}
 
 pub fn byte_to_utf32(bytes: Vec<u8>) -> Result<Vec<u32>, Box<dyn std::error::Error>> {
     let mut i = 0;
