@@ -3,19 +3,23 @@
  * ```
  * use toolbox::get_shift_bits;
  * let seq_len = 4;
+ * let mut actual = Vec::new();
  * for i in 0..seq_len{
  *  let shift_bits = get_shift_bits!(seq_len,i);
- *  assert_eq!([18,12,6,0][i], shift_bits);
+ *  actual.push(shift_bits);
  * }
+ * assert_eq!([18,12,6,0].to_vec(), actual);
  * ```
  * 2バイト文字の場合は以下のような使い方と結果になる。
  * ```
  * use toolbox::get_shift_bits;
  * let seq_len = 2;
+ * let mut actual = Vec::new();
  * for i in 0..seq_len{
  *  let shift_bits = get_shift_bits!(seq_len,i);
- *  assert_eq!([6,0][i], shift_bits);
+ *  actual.push(shift_bits);
  * }
+ * assert_eq!([6,0].to_vec(), actual);
  * ```
  */
 #[macro_export]

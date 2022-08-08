@@ -49,10 +49,12 @@ macro_rules! get_shift_bits_test {
         #[test]
         fn $id() {
             let seq_len = $seq_len;
+            let mut actual = Vec::new();
             for i in 0..seq_len {
                 let shift_bits = get_shift_bits!(seq_len, i);
-                assert_eq!($expect_array[i], shift_bits);
+                actual.push(shift_bits);
             }
+            assert_eq!($expect_array.to_vec(), actual);
         }
     };
 }
