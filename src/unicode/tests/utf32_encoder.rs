@@ -42,3 +42,22 @@ utf8_char_to_utf32_char_test!(
     0x0001_F9FF
 );
 utf8_char_to_utf32_char_test!(utf8char_to_utf32char_BOM, [0xEF, 0xBB, 0xBF], 0x0000_FEFF);
+use crate::get_shift_bits;
+
+macro_rules! get_shift_bits_test {
+    ($id:ident,$seq_len:expr,$expect_array:expr) => {
+        #[test]
+        fn $id() {
+            let seq_len = $seq_len;
+            for i in 0..seq_len {
+                let shift_bits = get_shift_bits!(seq_len, i);
+                assert_eq!($expect_array[i], shift_bits);
+            }
+        }
+    };
+}
+
+get_shift_bits_test!(get_shift_bits_test_4bytes, 4, [18, 12, 6, 0]);
+get_shift_bits_test!(get_shift_bits_test_3bytes, 3, [12, 6, 0]);
+get_shift_bits_test!(get_shift_bits_test_2bytes, 2, [6, 0]);
+get_shift_bits_test!(get_shift_bits_test_1bytes, 1, [0]);

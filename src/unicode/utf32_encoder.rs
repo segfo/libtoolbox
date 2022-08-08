@@ -1,11 +1,35 @@
+/**
+ * 4バイト文字の場合は以下のような使い方と結果になる。
+ * ```
+ * use toolbox::get_shift_bits;
+ * let seq_len = 4;
+ * for i in 0..seq_len{
+ *  let shift_bits = get_shift_bits!(seq_len,i);
+ *  assert_eq!([18,12,6,0][i], shift_bits);
+ * }
+ * ```
+ * 2バイト文字の場合は以下のような使い方と結果になる。
+ * ```
+ * use toolbox::get_shift_bits;
+ * let seq_len = 2;
+ * for i in 0..seq_len{
+ *  let shift_bits = get_shift_bits!(seq_len,i);
+ *  assert_eq!([6,0][i], shift_bits);
+ * }
+ * ```
+ */
+#[macro_export]
+macro_rules! get_shift_bits {
+    ($len:expr,$offset:expr) => {{
+        ($len - 1 - $offset) * 6
+    }};
+}
+
 pub fn utf8char_to_utf32char(bytes: &[u8]) -> u32 {
     //シフトさせるビット数の算出方法
-    // MAX:UTF-8シーケンスの最大値
-    // len:今処理しているUTF-8シーケンスの長さ
-    // offset:今処理しているシーケンスのオフセット
-    // シフトさせるbit数 = SH_BIT[(MAX - (MAX + 1 - len)) - offset]
-    const SH_BITS: [u8; 4] = [0, 6, 12, 18];
-    const MAX: usize = SH_BITS.len();
+    // UTF8_MAX_LEN: UTF-8シーケンスの最大長
+    // len: 今処理しているUTF-8シーケンスの長さ
+    // offset: 今処理しているシーケンスのオフセット
     const FIRST_BYTE_MASK: [u8; 4] = [0xff, 0x1F, 0x0f, 0x07]; // 最初のバイト
     const REMAINING_BYTES: u8 = 0x3F; // 残りのバイト
     let len = bytes.len();
@@ -20,7 +44,7 @@ pub fn utf8char_to_utf32char(bytes: &[u8]) -> u32 {
             REMAINING_BYTES
         };
         // シフトさせるビット数
-        let sh_bits = SH_BITS[(MAX - (MAX + 1 - len)) - offset];
+        let sh_bits = get_shift_bits!(len, offset);
         // ビットを分離して合成する
         utf32 |= ((c & mask) as u32) << sh_bits
     }
