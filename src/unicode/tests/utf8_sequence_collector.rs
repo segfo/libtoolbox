@@ -1,4 +1,4 @@
-use crate::unicode::error::{UnicodeParseError, UnicodeParseErrorKind};
+use crate::unicode::error::UnicodeParseErrorKind;
 use crate::unicode::sequence_data::*;
 use crate::unicode::utf8_sequence_collector::*;
 #[allow(dead_code)]
@@ -169,6 +169,7 @@ fn 符号化されたBOM() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn utf8_validate_符号化されたBOM() {
     let bytes = [0xEF, 0xBB, 0xBF].to_vec();
     dump(&bytes);
@@ -183,6 +184,7 @@ fn utf8_validate_符号化されたBOM() {
 }
 
 #[test]
+#[allow(non_snake_case)]
 fn utf8_validate_符号化されたBOM_バッファ尻切れトンボ() {
     let bytes = [0xEF, 0xBB].to_vec();
     dump(&bytes);

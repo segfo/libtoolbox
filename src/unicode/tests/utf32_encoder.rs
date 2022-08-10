@@ -2,6 +2,7 @@ use crate::unicode::utf32_encoder::*;
 macro_rules! utf8_char_to_utf32_char_test {
     ($id:ident,$c: expr, $utf32: expr) => {
         #[test]
+        #[allow(non_snake_case)]
         fn $id() {
             let utf32 = utf8char_to_utf32char(&$c);
             assert_eq!(utf32, $utf32);

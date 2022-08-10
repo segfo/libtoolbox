@@ -1,6 +1,5 @@
 use crate::get_shift_bits;
-use crate::unicode::sequence_data::*;
-use crate::unicode::utf32_encoder::utf8char_to_utf32char;
+use crate::unicode::utf32_encoder::{utf32_to_utf8_len, utf8char_to_utf32char};
 use crate::unicode::utf8_sequence_collector::utf8_validate;
 // pub fn collect_utf32_sequences(byte: &Vec<u32>) -> SequenceData {
 //     let mut i = 0;
@@ -46,21 +45,6 @@ use crate::unicode::utf8_sequence_collector::utf8_validate;
 //     }
 //     SequenceData::collect_sequence_data(seqdata_list)
 // }
-
-fn utf32_to_utf8_len(utf32: u32) -> Result<usize, Box<UnicodeParseError>> {
-    match utf32 {
-        0..=0x7F => Ok(1),
-        0x0000_0080..=0x0000_07FF => Ok(2),
-        // 0x0000_D800-0x0000_DFFFはサロゲートペアのコードポイントのため2バイトコードではない
-        0x0000_0800..=0x0000_D7FF | 0x0000_E000..=0x0000_FFFF => Ok(3),
-        0x0001_0000..=0x0010_FFFF => Ok(4),
-        _ => {
-            return Err(Box::new(UnicodeParseError::new(
-                UnicodeParseErrorKind::IllegalRange,
-            )));
-        }
-    }
-}
 
 use crate::unicode::error::*;
 pub fn utf32_to_string(utf32_array: &Vec<u32>) -> Result<String, Box<UnicodeParseError>> {

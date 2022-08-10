@@ -47,6 +47,7 @@ mod enqueue_tests {
         assert_eq!(buf.dequeue(), Some(20));
     }
 }
+#[cfg(test)]
 mod dequeue_tests {
     use crate::ring_buffer::RingBuffer;
     #[test]

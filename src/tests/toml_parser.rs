@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::io::Read;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
 struct Config {
@@ -30,7 +29,7 @@ mod serializer {
     fn serialize() {
         let conf = Config::new();
         let mut v = Vec::new();
-        TomlConfigSerializer::to_writer(&conf, &mut v);
+        let _ = TomlConfigSerializer::to_writer(&conf, &mut v);
         assert_eq!(String::from_utf8(v).unwrap(), Config::get_serialize_data());
     }
     #[test]
@@ -47,31 +46,31 @@ mod serializer {
         let serialize_file = "./test_data/serialize.toml";
         assert_eq!(std::path::Path::new(serialize_file).exists(), false);
         let mut conf = Config::new();
-        TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        let _ = TomlConfigSerializer::to_file(conf.clone(), serialize_file);
         let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
         assert_eq!(conf, load_conf);
         conf.int32 = 20;
         conf.string = "manipulated.".to_owned();
-        TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        let _ = TomlConfigSerializer::to_file(conf.clone(), serialize_file);
         let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
         assert_eq!(conf, load_conf);
-        std::fs::remove_file(serialize_file);
+        let _ = std::fs::remove_file(serialize_file);
     }
     #[test]
     fn serialize_to_file_存在しないディレクトリの下にファイルを作成する場合() {
         let serialize_file = "./test_data/non_exists/serialize.toml";
         let mut conf = Config::new();
-        TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        let _ = TomlConfigSerializer::to_file(conf.clone(), serialize_file);
         let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
         assert_eq!(conf, load_conf);
         conf.int32 = 20;
         conf.string = "manipulated.".to_owned();
-        TomlConfigSerializer::to_file(conf.clone(), serialize_file);
+        let _ = TomlConfigSerializer::to_file(conf.clone(), serialize_file);
         let load_conf: Config = TomlConfigDeserializer::from_file(serialize_file).unwrap();
         assert_eq!(conf, load_conf);
-        std::fs::remove_file(serialize_file);
-        std::fs::remove_dir("./test_data/non_exists/");
-        std::fs::remove_dir("./test_data");
+        let _ = std::fs::remove_file(serialize_file);
+        let _ = std::fs::remove_dir("./test_data/non_exists/");
+        let _ = std::fs::remove_dir("./test_data");
     }
     #[test]
     fn serialize_to_file_存在するディレクトリ_非ファイル_を指定する() {
@@ -85,8 +84,7 @@ mod serializer {
 
 mod deserializer {
     use crate::tests::toml_parser::Config;
-    use crate::toml_parser::{TomlConfigDeserializer, TomlConfigSerializer};
-    use std::io::Cursor;
+    use crate::toml_parser::TomlConfigDeserializer;
     #[test]
     fn from_file_存在するディレクトリ_非ファイル_を指定する() {
         let serialize_file = "./test_data/exists_directory";
