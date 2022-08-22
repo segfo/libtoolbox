@@ -4,7 +4,7 @@ use crate::unicode::utf8_sequence_collector::*;
 #[allow(dead_code)]
 fn dump(byte: &Vec<u8>) {
     for b in byte {
-        print!("{:?} ", b);
+        print!("{:x} ", b);
     }
     println!();
 }
@@ -140,18 +140,32 @@ fn 明らかにおかしいUTF8シーケンスがある場合5() {
     }
 }
 
+#[allow(non_snake_case)]
 #[test]
-fn 冗長な符号化() {
-    let bytes = [0x2F, 0xC0, 0xAF, 0xE0, 0x80, 0xAF, 0xF0, 0x80, 0x80, 0xAF].to_vec();
-    dump(&bytes);
-    let actual_seq = collect_utf8_sequences(&bytes).get_sequence();
-    let expect_seq = [
-        DataSequence::Utf8Sequence("/".to_owned()),
-        DataSequence::ByteSequence(vec![0xC0, 0xAF, 0xE0, 0x80, 0xAF, 0xF0, 0x80, 0x80, 0xAF]),
-    ];
-    assert_eq!(actual_seq.len(), expect_seq.len());
-    for (i, seq) in actual_seq.iter().enumerate() {
-        assert_eq!(seq, &expect_seq[i]);
+fn 冗長なAscii符号化() {
+    use crate::unicode::tests::redundant_utf8_sequence;
+    for c in 0x00..=0x7F {
+        let expect = redundant_utf8_sequence(c);
+        let actual_seq = collect_utf8_sequences(
+            &[
+                vec![c],
+                expect[0].clone(),
+                expect[1].clone(),
+                expect[2].clone(),
+            ]
+            .concat(),
+        )
+        .get_sequence();
+        let expect_seq = [
+            DataSequence::Utf8Sequence(String::from_utf8(vec![c]).unwrap().to_owned()),
+            DataSequence::ByteSequence(
+                [expect[0].clone(), expect[1].clone(), expect[2].clone()].concat(),
+            ),
+        ];
+        assert_eq!(actual_seq.len(), expect_seq.len());
+        for (i, seq) in actual_seq.iter().enumerate() {
+            assert_eq!(seq, &expect_seq[i]);
+        }
     }
 }
 
